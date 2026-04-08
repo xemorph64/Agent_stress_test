@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "openenv-agent-stress-test-env"
+version = "1.0.0"
+description = "Agentic System Stress Tester Environment for OpenEnv"
+requires-python = ">=3.10"
+dependencies = [
+    "openenv-core[core]>=0.2.1",
+    "fastapi>=0.115.0",
+    "pydantic>=2.0.0",
+    "uvicorn[standard]>=0.24.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.21.0",
+]
+
+[project.scripts]
+server = "agent_stress_test_env.server.app:main"
+
+[tool.setuptools]
+packages = ["agent_stress_test_env", "agent_stress_test_env.server"]
+package-dir = { "agent_stress_test_env" = ".", "agent_stress_test_env.server" = "server" }
+
+[tool.setuptools.package-data]
+agent_stress_test_env = ["**/*.yaml", "**/*.yml"]
