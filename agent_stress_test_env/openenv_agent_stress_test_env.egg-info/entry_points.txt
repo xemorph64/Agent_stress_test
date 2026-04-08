@@ -1,2 +1,0 @@
-[console_scripts]
-server = agent_stress_test_env.server.app:main

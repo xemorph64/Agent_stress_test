@@ -1,0 +1,189 @@
+spec_version: 1
+name: agent_stress_test_env
+type: space
+runtime: fastapi
+app: server.app:app
+port: 8000
+
+tasks:
+  - id: easy
+    name: "Specification Ambiguity Fix"
+    difficulty: easy
+    category: "MAST FC1: System Design (41.8% of failures)"
+    description: |
+      The researcher agent has a vague role definition ('You are a helpful assistant').
+      This causes task misinterpretation - the agent doesn't know what to research.
+      Your task: Provide an explicit role specification JSON with clear capabilities,
+      constraints, and success criteria.
+    failure_mode: "FM-1.1: Specification ambiguity - vague role definition causes task misinterpretation"
+    grader:
+      type: programmatic
+      score_range: [0.0, 1.0]
+      criteria: |
+        Based on MAST research: 41.8% of multi-agent failures come from specification issues.
+        The agent must identify vague specs and provide explicit role definitions.
+        - +0.35 for providing explicit role specification (spec_fix or explicit_role_spec)
+        - +0.40 * success_rate from 10 simulation trials
+        - +0.10 for achieving 80%+ success rate
+        - +0.25 max for diagnosis keywords (partial credit)
+
+  - id: medium
+    name: "Format Mismatch Fix"
+    difficulty: medium
+    category: "MAST FC2: Inter-Agent Misalignment (36.9% of failures)"
+    description: |
+      Multi-agent workflow where the planner outputs YAML but the executor expects JSON.
+      This format mismatch causes the executor to fail (cannot parse input).
+      Your task: Add a format translation layer/middleware to convert YAML to JSON.
+    failure_mode: "FM-2.x: Format mismatch - planner outputs YAML, executor expects JSON"
+    grader:
+      type: programmatic
+      score_range: [0.0, 1.0]
+      criteria: |
+        Based on MAST research: 36.9% of failures come from inter-agent communication issues.
+        The agent must detect format mismatches and add translation.
+        - +0.30 for enabling format_translator
+        - +0.45 * success_rate from 10 simulation trials
+        - +0.10 for achieving 70%+ success rate
+        - +0.20 max for diagnosis keywords (partial credit)
+
+  - id: hard
+    name: "Verification Failure Fix"
+    difficulty: hard
+    category: "MAST FC3: Task Verification (21.3% of failures)"
+    description: |
+      Multi-agent pipeline with verification failure. The writer produces content
+      with contradictions (30% rate), and the reviewer prematurely approves (60% rate)
+      without proper verification. This combines premature termination with incorrect verification.
+      Your task: Implement multi-level verification - unit checks per agent,
+      integration checks across outputs, and final validation against success criteria.
+    failure_mode: "FM-3.1/FM-3.3: Verification failure - premature termination + incorrect verification"
+    grader:
+      type: programmatic
+      score_range: [0.0, 1.0]
+      criteria: |
+        Based on MAST research: 21.3% of failures come from verification issues
+        (6.2% premature, 8.2% no verification, 9.1% incorrect).
+        IBM 2026 update: FM-3.3 (Incorrect Verification) is the STRONGEST predictor of failure.
+        The agent must add deep verification with explicit success criteria.
+        - +0.15 for enabling consistency_check
+        - +0.15 for setting min_review_depth >= 3
+        - +0.45 * success_rate from 10 simulation trials
+        - +0.10 for achieving 50%+ success rate
+        - +0.20 max for diagnosis keywords (partial credit)
+
+  - id: termination
+    name: "Termination Awareness Fix"
+    difficulty: medium
+    category: "MAST FC1: System Design - FATAL FAILURE"
+    description: |
+      The agent struggles to recognize when a task is complete. It either:
+      - Loops indefinitely (FM-1.3 Step Repetition)
+      - Prematurely exits without confirming success (FM-3.1)
+      - Is unaware of termination conditions (FM-1.5)
+      
+      Based on IBM 2026: Kimi-K2 shows +46% spike in termination issues.
+      Your task: Implement explicit termination conditions with success criteria verification.
+    failure_mode: "FM-1.5/FM-3.1: Unaware of termination + premature termination"
+    grader:
+      type: programmatic
+      score_range: [0.0, 1.0]
+      criteria: |
+        FATAL FAILURE: When these modes appear, success probability drops precipitously.
+        IBM 2026: Use deterministic state machine to enforce termination.
+        - +0.25 for enabling explicit termination detection
+        - +0.20 for implementing max_iterations limit
+        - +0.30 * success_rate from 10 simulation trials
+        - +0.15 for achieving 60%+ success rate
+        - +0.15 max for diagnosis keywords (partial credit)
+
+  - id: memory
+    name: "Conversation History Fix"
+    difficulty: hard
+    category: "MAST FC1: System Design - FATAL FAILURE"
+    description: |
+      As conversation history grows, the agent loses context and derails.
+      This is FM-1.4 (Loss of Conversation History) - unique fatal flaw.
+      Based on IBM 2026: GPT-OSS-120B shows 24% memory loss in long traces.
+      Your task: Implement context management - sliding window, summarization, or state machine.
+    failure_mode: "FM-1.4: Loss of conversation history - agent forgets original task"
+    grader:
+      type: programmatic
+      score_range: [0.0, 1.0]
+      criteria: |
+        FATAL FAILURE: Memory loss in long traces leads to total task derailment.
+        IBM 2026: Implement aggressive context hygiene and early error detection.
+        - +0.20 for enabling context summarization
+        - +0.20 for implementing sliding window
+        - +0.35 * success_rate from 10 simulation trials (with long context)
+        - +0.15 for achieving 50%+ success rate in long traces
+        - +0.15 max for diagnosis keywords (partial credit)
+
+  - id: reasoning
+    name: "Reasoning-Action Alignment Fix"
+    difficulty: hard
+    category: "MAST FC2: Inter-Agent Misalignment - FATAL FAILURE"
+    description: |
+      The agent identifies the correct next step but executes a redundant or irrelevant command.
+      FM-2.6: Reasoning-Action Mismatch - describes correct plan but executes unrelated tool call.
+      Based on IBM 2026: 92% of Kimi-K2 failures and 94% of GPT-OSS-120B failures show this.
+      Your task: Implement action validation layer that checks execution against reasoning.
+    failure_mode: "FM-2.6: Reasoning-action mismatch - correct thinking, wrong execution"
+    grader:
+      type: programmatic
+      score_range: [0.0, 1.0]
+      criteria: |
+        FATAL FAILURE: Decoupling of reasoning and action causes cascading collapse.
+        IBM 2026: Small reasoning mismatches early poison entire task history.
+        - +0.20 for enabling action validation
+        - +0.20 for implementing reasoning-execution consistency check
+        - +0.35 * success_rate from 10 simulation trials
+        - +0.15 for achieving 45%+ success rate
+        - +0.15 max for diagnosis keywords (partial credit)
+
+difficulty_progression:
+  - easy: "Single spec issue (vague role definition) - solution: explicit spec"
+  - medium: "Inter-agent format mismatch (YAML vs JSON) - solution: translator"
+  - hard: "Verification failure (premature + incorrect) - solution: multi-level checks"
+  - termination: "Termination awareness (loops/premature exit) - solution: state machine"
+  - memory: "Conversation history loss (forgets context) - solution: context management"
+  - reasoning: "Reasoning-action mismatch (wrong execution) - solution: validation layer"
+
+research_basis:
+  - name: "MAST: Multi-Agent System Failure Taxonomy"
+    source: "NeurIPS 2025 (Berkeley)"
+    url: "https://arxiv.org/abs/2503.13657"
+    key_finding: "Multi-agent LLM systems fail 41-86.7% of the time in production"
+  - name: "IBM and UC Berkeley: Enterprise Agents Fail with IT-Bench and MAST"
+    source: "Hugging Face Blog (Feb 2026)"
+    url: "https://huggingface.co/blog/ibm-research/itbenchandmast"
+    key_finding: "FM-3.3 (Incorrect Verification) is strongest failure predictor; fatal vs non-fatal distinction critical"
+  - name: "Why Do Multi-Agent LLM Systems Fail?"
+    source: "Future AGI 2026 Guide"
+    url: "https://futureagi.substack.com/p/why-do-multi-agent-llm-systems-fail"
+    key_finding: "79% of failures come from spec and coordination, not infrastructure"
+
+metadata:
+  category: agentic-systems
+  tags:
+    - multi-agent
+    - resilience
+    - stress-testing
+    - fault-tolerance
+    - mast-research
+    - specification
+    - verification
+    - termination-awareness
+    - memory-management
+    - reasoning-alignment
+    - ibm-research
+  created: 2026-04-08
+  version: 1.2.0
+  author: OpenEnv Hackathon
+  benchmark_scores:
+    easy: "Expected 0.85+ for strong LLM with explicit spec"
+    medium: "Expected 0.60-0.75 for strong LLM with translator"
+    hard: "Expected 0.35-0.50 for strong LLM with deep verification"
+    termination: "Expected 0.50-0.65 for LLM with state machine"
+    memory: "Expected 0.40-0.55 for LLM with context management"
+    reasoning: "Expected 0.35-0.50 for LLM with validation layer"
